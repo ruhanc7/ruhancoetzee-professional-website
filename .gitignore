@@ -1,0 +1,2 @@
+# Exclude LinkedIn PDF — contains personal info, not needed for deployment
+*.pdf
