@@ -805,18 +805,18 @@
       <form class="contact-form" onsubmit="handleSubmit(event)">
         <div class="form-group">
           <label for="name">Name</label>
-          <input type="text" id="name" placeholder="Jane Smith" required />
+          <input type="text" id="name" name="name" placeholder="Jane Smith" required />
         </div>
         <div class="form-group">
           <label for="email">Email</label>
-          <input type="email" id="email" placeholder="jane@example.com" required />
+          <input type="email" id="email" name="email" placeholder="jane@example.com" required />
         </div>
         <div class="form-group">
           <label for="message">Message</label>
-          <textarea id="message" rows="5" placeholder="Tell me what's on your mind…" required></textarea>
+          <textarea id="message" name="message" rows="5" placeholder="Tell me what's on your mind…" required></textarea>
         </div>
-        <button type="submit" class="btn btn-primary">Send Message</button>
-        <p id="form-status" style="font-size:0.85rem; color: var(--accent); display:none; margin-top:0.5rem;"></p>
+        <button type="submit" class="btn btn-primary" id="submit-btn">Send Message</button>
+        <p id="form-status" style="font-size:0.85rem; display:none; margin-top:0.5rem;"></p>
       </form>
 
     </div>
@@ -850,13 +850,39 @@
     window.addEventListener('scroll', updateActiveLink, { passive: true });
     updateActiveLink();
 
-    // Simple contact form handler (no backend — shows confirmation message)
-    function handleSubmit(e) {
+    // Contact form — submits to Formspree
+    async function handleSubmit(e) {
       e.preventDefault();
+      const form = e.target;
+      const btn = document.getElementById('submit-btn');
       const status = document.getElementById('form-status');
-      status.textContent = "Thanks for reaching out! I'll get back to you soon.";
+
+      btn.disabled = true;
+      btn.textContent = 'Sending…';
+
+      try {
+        const response = await fetch('https://formspree.io/f/xojnbolv', {
+          method: 'POST',
+          body: new FormData(form),
+          headers: { 'Accept': 'application/json' }
+        });
+
+        if (response.ok) {
+          status.textContent = "Thanks for reaching out! I'll get back to you soon.";
+          status.style.color = 'var(--accent)';
+          form.reset();
+        } else {
+          status.textContent = "Something went wrong — please email me directly.";
+          status.style.color = '#ff6b6b';
+        }
+      } catch {
+        status.textContent = "Something went wrong — please email me directly.";
+        status.style.color = '#ff6b6b';
+      }
+
       status.style.display = 'block';
-      e.target.reset();
+      btn.disabled = false;
+      btn.textContent = 'Send Message';
     }
   </script>
 
