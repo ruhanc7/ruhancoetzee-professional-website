@@ -477,6 +477,99 @@
       margin: 0 auto;
     }
 
+    /* ===== MINI GAME ===== */
+    #game { border-top: 1px solid var(--border); }
+
+    .game-teaser {
+      text-align: center;
+      padding: 2rem 0 1rem;
+    }
+
+    .game-hint {
+      font-size: 1rem;
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+    }
+
+    .game-wrap {
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    #gameCanvas {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: block;
+      cursor: pointer;
+      background: var(--accent-soft);
+    }
+
+    .game-sub {
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.6rem;
+    }
+
+    .name-entry {
+      text-align: center;
+      margin-top: 1rem;
+      padding: 1rem;
+      background: var(--card-bg);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+    }
+
+    .name-entry p {
+      font-size: 0.9rem;
+      color: var(--accent);
+      margin-bottom: 0.75rem;
+    }
+
+    .name-entry input {
+      background: var(--primary);
+      border: 1px solid var(--border);
+      color: var(--white);
+      border-radius: 4px;
+      padding: 0.4rem 0.75rem;
+      font-size: 0.9rem;
+      font-family: var(--font);
+      outline: none;
+      margin-right: 0.5rem;
+      width: 160px;
+    }
+
+    .name-entry input:focus { border-color: var(--accent); }
+
+    .score-board {
+      max-width: 360px;
+      margin: 1.5rem auto 0;
+    }
+
+    .score-board-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--text-muted);
+      margin-bottom: 0.6rem;
+      text-align: center;
+    }
+
+    .score-row {
+      display: flex;
+      align-items: center;
+      padding: 0.4rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.85rem;
+    }
+
+    .score-row:first-of-type { border-top: 1px solid var(--border); }
+    .score-rank { width: 28px; color: var(--text-muted); }
+    .score-name { flex: 1; color: var(--white); padding-left: 0.25rem; }
+    .score-val  { color: var(--accent); font-weight: 700; font-family: monospace; }
+
     /* ===== RESPONSIVE ===== */
     @media (max-width: 640px) {
       .nav-links { gap: 1rem; }
@@ -792,6 +885,31 @@
     </div>
   </section>
 
+  <!-- ===== MINI GAME ===== -->
+  <section id="game">
+    <p class="section-label">Easter Egg</p>
+    <h2 class="section-title">Feeling Curious?</h2>
+    <div class="divider"></div>
+
+    <div class="game-teaser" id="gameTeaser">
+      <p class="game-hint">Have a look...</p>
+      <button class="btn btn-outline" onclick="revealGame()">Click for a surprise &rarr;</button>
+    </div>
+
+    <div class="game-wrap" id="gameWrap" style="display:none;">
+      <canvas id="gameCanvas"></canvas>
+      <p class="game-sub">Space / tap to jump &middot; dodge the bugs and corrupted files</p>
+
+      <div class="name-entry" id="nameEntry" style="display:none;">
+        <p>New high score! Enter your nickname:</p>
+        <input type="text" id="playerName" maxlength="14" placeholder="Your nickname" />
+        <button class="btn btn-primary" style="padding:0.45rem 1rem;font-size:0.85rem;" onclick="submitScore()">Save</button>
+      </div>
+
+      <div id="scoreBoard"></div>
+    </div>
+  </section>
+
   <!-- ===== CONTACT ===== -->
   <section id="contact">
     <p class="section-label">Let's Talk</p>
@@ -941,6 +1059,300 @@
         shuffle: true,
       });
     })();
+
+    // ===== MINI GAME =====
+
+    // --- high score helpers ---
+    let _gameOverScore = 0;
+
+    function loadScores() {
+      try { return JSON.parse(localStorage.getItem('rc_hiscores') || '[]'); }
+      catch { return []; }
+    }
+
+    function saveScore(name, score) {
+      const scores = loadScores();
+      scores.push({ name: name || 'Anonymous', score });
+      scores.sort((a, b) => b.score - a.score);
+      scores.splice(5);
+      localStorage.setItem('rc_hiscores', JSON.stringify(scores));
+    }
+
+    function escHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function renderScores() {
+      const scores = loadScores();
+      const board = document.getElementById('scoreBoard');
+      if (!scores.length) { board.innerHTML = ''; return; }
+      const medals = ['🥇','🥈','🥉','4.','5.'];
+      board.innerHTML = '<div class="score-board"><p class="score-board-title">Your High Scores</p>' +
+        scores.map((s, i) =>
+          `<div class="score-row"><span class="score-rank">${medals[i]}</span><span class="score-name">${escHtml(s.name)}</span><span class="score-val">${s.score}</span></div>`
+        ).join('') + '</div>';
+    }
+
+    function checkHighScore(score) {
+      const scores = loadScores();
+      if (score > 0 && (scores.length < 5 || score > scores[scores.length - 1].score)) {
+        _gameOverScore = score;
+        const savedNick = localStorage.getItem('rc_nickname');
+        if (savedNick) {
+          // nickname already known — save automatically, no prompt
+          saveScore(savedNick, score);
+          renderScores();
+        } else {
+          document.getElementById('nameEntry').style.display = 'block';
+          setTimeout(() => document.getElementById('playerName').focus(), 50);
+        }
+      }
+    }
+
+    function submitScore() {
+      const input = document.getElementById('playerName');
+      const name = input.value.trim() || 'Anonymous';
+      localStorage.setItem('rc_nickname', name); // remember for next time
+      saveScore(name, _gameOverScore);
+      document.getElementById('nameEntry').style.display = 'none';
+      input.value = '';
+      renderScores();
+    }
+
+    // Enter key submits the name
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && document.getElementById('nameEntry').style.display !== 'none') {
+        submitScore();
+      }
+    });
+
+    function revealGame() {
+      document.getElementById('gameTeaser').style.display = 'none';
+      document.getElementById('gameWrap').style.display = 'block';
+      renderScores();
+      initGame();
+    }
+
+    function initGame() {
+      const canvas = document.getElementById('gameCanvas');
+      const ctx    = canvas.getContext('2d');
+      const W = 700, H = 210;
+      canvas.width  = W;
+      canvas.height = H;
+
+      const GROUND  = H - 38;
+      const GRAVITY = 0.52;
+      const JUMP_V  = -11.5;
+
+      let state = 'waiting'; // waiting | running | dead
+      let score = 0, hiScore = 0, speed = 4, frame = 0;
+      let player   = { x: 80, y: GROUND, vy: 0 };
+      let obstacles = [];
+      let nextObs   = 90;
+
+      function jump() {
+        if (state === 'waiting') { state = 'running'; }
+        if (state === 'running' && player.y >= GROUND - 1) { player.vy = JUMP_V; }
+        if (state === 'dead') {
+          score = 0; speed = 4; frame = 0;
+          obstacles = []; nextObs = 90;
+          player.y = GROUND; player.vy = 0;
+          state = 'running';
+        }
+      }
+
+      // --- input (only active while game section exists) ---
+      function onKey(e) {
+        if ((e.code === 'Space' || e.code === 'ArrowUp') &&
+            document.getElementById('gameWrap').style.display !== 'none') {
+          e.preventDefault();
+          jump();
+        }
+      }
+      document.addEventListener('keydown', onKey);
+      canvas.addEventListener('click', jump);
+      canvas.addEventListener('touchstart', function(e){ e.preventDefault(); jump(); }, { passive: false });
+
+      // --- draw stickman ---
+      function drawPlayer() {
+        const x = player.x, y = player.y;
+        const airborne = y < GROUND - 2;
+        const swing = airborne ? 0 : Math.sin(frame * 0.28) * 10;
+
+        ctx.save();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+
+        // head
+        const headR = 7, headY = y - 50 + headR;
+        ctx.beginPath(); ctx.arc(x, headY, headR, 0, Math.PI * 2); ctx.stroke();
+
+        // body
+        const neckY = headY + headR, hipY = y - 18;
+        ctx.beginPath(); ctx.moveTo(x, neckY); ctx.lineTo(x, hipY); ctx.stroke();
+
+        // arms
+        const shoulderY = neckY + 7;
+        ctx.beginPath(); ctx.moveTo(x, shoulderY); ctx.lineTo(x - 13 - swing, hipY - 4); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x, shoulderY); ctx.lineTo(x + 13 + swing, hipY - 4); ctx.stroke();
+
+        // legs
+        const legSwing = airborne ? 10 : swing;
+        ctx.beginPath(); ctx.moveTo(x, hipY); ctx.lineTo(x - 10 - legSwing, y); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x, hipY); ctx.lineTo(x + 10 + legSwing, y); ctx.stroke();
+
+        ctx.restore();
+      }
+
+      // --- spawn obstacle ---
+      function spawnObs() {
+        const r = Math.random();
+        if (r < 0.15) {
+          // flying bug — hovers at mid-height
+          const flyH = 18 + Math.floor(Math.random() * 10);
+          obstacles.push({ type: 'bug', x: W + 10, y: GROUND - 75 - Math.floor(Math.random() * 25), w: 30, h: flyH });
+        } else if (r < 0.55) {
+          // ground bug — randomise size slightly
+          const bugH = 16 + Math.floor(Math.random() * 14);
+          obstacles.push({ type: 'bug', x: W + 10, y: GROUND - bugH, w: 28 + Math.floor(Math.random() * 8), h: bugH });
+        } else {
+          // corrupted file — random height
+          const h = 30 + Math.floor(Math.random() * 30);
+          obstacles.push({ type: 'file', x: W + 10, y: GROUND - h, w: 24 + Math.floor(Math.random() * 8), h });
+        }
+      }
+
+      // --- draw bug ---
+      function drawBug(o) {
+        ctx.save();
+        const cx = o.x + o.w / 2, cy = o.y + o.h / 2;
+        // body
+        ctx.fillStyle = '#e94560';
+        ctx.beginPath(); ctx.ellipse(cx, cy, 10, 7, 0, 0, Math.PI * 2); ctx.fill();
+        // head
+        ctx.fillStyle = '#c0304a';
+        ctx.beginPath(); ctx.arc(cx + 11, cy, 5, 0, Math.PI * 2); ctx.fill();
+        // legs
+        ctx.strokeStyle = '#e94560'; ctx.lineWidth = 1.5;
+        [-3, 0, 3].forEach(dy => {
+          ctx.beginPath(); ctx.moveTo(cx - 3, cy + dy); ctx.lineTo(cx - 16, cy + dy + 3); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(cx + 3, cy + dy); ctx.lineTo(cx + 17, cy + dy + 3); ctx.stroke();
+        });
+        // antennae
+        ctx.beginPath(); ctx.moveTo(cx + 13, cy - 4); ctx.lineTo(cx + 19, cy - 11); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx + 15, cy - 1); ctx.lineTo(cx + 22, cy - 5); ctx.stroke();
+        ctx.restore();
+      }
+
+      // --- draw corrupted file ---
+      function drawFile(o) {
+        ctx.save();
+        const { x, y, w, h } = o, fold = 8;
+        // body
+        ctx.fillStyle = '#0d1b35';
+        ctx.strokeStyle = '#e94560'; ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(x, y); ctx.lineTo(x + w - fold, y);
+        ctx.lineTo(x + w, y + fold); ctx.lineTo(x + w, y + h);
+        ctx.lineTo(x, y + h); ctx.closePath();
+        ctx.fill(); ctx.stroke();
+        // fold
+        ctx.beginPath(); ctx.moveTo(x + w - fold, y); ctx.lineTo(x + w - fold, y + fold); ctx.lineTo(x + w, y + fold); ctx.stroke();
+        // glitch lines
+        ctx.lineWidth = 1;
+        [0.3, 0.5, 0.7].forEach(t => {
+          const ly = y + h * t;
+          ctx.beginPath(); ctx.moveTo(x + 3, ly); ctx.lineTo(x + w - 3, ly); ctx.stroke();
+        });
+        // ERR label
+        ctx.fillStyle = '#e94560'; ctx.font = 'bold 7px monospace'; ctx.textAlign = 'center';
+        ctx.fillText('ERR', x + w / 2, y + h - 5);
+        ctx.restore();
+      }
+
+      // --- collision (AABB with small margin) ---
+      function collides(o) {
+        const m = 4;
+        return (player.x - 8 + 16 > o.x + m) &&
+               (player.x - 8     < o.x + o.w - m) &&
+               (player.y - 50 + 50 > o.y + m) &&
+               (player.y - 50     < o.y + o.h - m);
+      }
+
+      // --- main loop ---
+      function loop() {
+        ctx.clearRect(0, 0, W, H);
+
+        // ground
+        ctx.fillStyle = 'rgba(255,255,255,0.07)';
+        ctx.fillRect(0, GROUND + 3, W, 1);
+
+        if (state === 'waiting') {
+          drawPlayer();
+          ctx.fillStyle = 'rgba(255,255,255,0.55)';
+          ctx.font = '14px system-ui'; ctx.textAlign = 'center';
+          ctx.fillText('Press Space or tap to start', W / 2, H / 2 - 8);
+          requestAnimationFrame(loop);
+          return;
+        }
+
+        if (state === 'running') {
+          frame++;
+          // physics
+          player.vy += GRAVITY;
+          player.y  += player.vy;
+          if (player.y >= GROUND) { player.y = GROUND; player.vy = 0; }
+
+          // speed ramp — starts slow, increases gradually, caps at 10
+          speed = Math.min(10, 2.5 + score * 0.0012);
+
+          // spawn
+          nextObs--;
+          if (nextObs <= 0) {
+            spawnObs();
+            nextObs = 75 + Math.floor(Math.random() * 70) - Math.min(30, Math.floor(score / 500));
+          }
+
+          // move & check obstacles
+          for (let i = obstacles.length - 1; i >= 0; i--) {
+            obstacles[i].x -= speed;
+            if (obstacles[i].x + obstacles[i].w < 0) { obstacles.splice(i, 1); continue; }
+            if (collides(obstacles[i])) { state = 'dead'; if (score > hiScore) hiScore = score; checkHighScore(score); }
+          }
+
+          score++;
+        }
+
+        // draw obstacles
+        obstacles.forEach(o => o.type === 'bug' ? drawBug(o) : drawFile(o));
+
+        // draw player
+        drawPlayer();
+
+        // score
+        ctx.textAlign = 'right'; ctx.font = '13px monospace';
+        ctx.fillStyle = 'rgba(255,255,255,0.45)';
+        ctx.fillText('Score: ' + score, W - 14, 22);
+        if (hiScore > 0) {
+          ctx.fillStyle = 'rgba(233,69,96,0.65)';
+          ctx.fillText('Best: ' + hiScore, W - 14, 38);
+        }
+
+        if (state === 'dead') {
+          ctx.fillStyle = 'rgba(0,0,0,0.52)';
+          ctx.fillRect(0, 0, W, H);
+          ctx.fillStyle = '#e94560'; ctx.font = 'bold 24px system-ui'; ctx.textAlign = 'center';
+          ctx.fillText('CORRUPTED', W / 2, H / 2 - 12);
+          ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.font = '13px system-ui';
+          ctx.fillText('Space or tap to retry', W / 2, H / 2 + 12);
+        }
+
+        requestAnimationFrame(loop);
+      }
+
+      loop();
+    }
 
     // Contact form — submits to Formspree
     async function handleSubmit(e) {
