@@ -517,13 +517,13 @@
       margin-top: 1rem;
       padding: 1rem;
       background: var(--card-bg);
-      border: 1px solid var(--accent);
+      border: 1px solid #a0d4b0;
       border-radius: 8px;
     }
 
     .name-entry p {
       font-size: 0.9rem;
-      color: var(--accent);
+      color: #a0d4b0;
       margin-bottom: 0.75rem;
     }
 
@@ -540,7 +540,7 @@
       width: 160px;
     }
 
-    .name-entry input:focus { border-color: var(--accent); }
+    .name-entry input:focus { border-color: #a0d4b0; }
 
     .score-board {
       max-width: 360px;
@@ -569,6 +569,24 @@
     .score-rank { width: 28px; color: var(--text-muted); }
     .score-name { flex: 1; color: var(--white); padding-left: 0.25rem; }
     .score-val  { color: var(--accent); font-weight: 700; font-family: monospace; }
+
+    /* ===== HAT PICKER ===== */
+    .hat-picker { text-align: center; margin-bottom: 1.2rem; }
+    .hat-picker-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 0.75rem; }
+    .hat-options { display: flex; justify-content: center; gap: 0.9rem; flex-wrap: wrap; }
+    .hat-option {
+      cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; gap: 0.3rem;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      transition: border-color 0.18s, background 0.18s;
+    }
+    .hat-option:hover { border-color: rgba(233,69,96,0.5); }
+    .hat-option.selected { border-color: var(--accent); background: rgba(233,69,96,0.08); }
+    .hat-option canvas { display: block; }
+    .hat-option span { font-size: 0.72rem; color: var(--text-muted); }
+    .hat-option.selected span { color: var(--accent); }
 
     /* ===== RESPONSIVE ===== */
     @media (max-width: 640px) {
@@ -897,6 +915,33 @@
     </div>
 
     <div class="game-wrap" id="gameWrap" style="display:none;">
+
+      <div class="hat-picker" id="hatPicker">
+        <p class="hat-picker-label">Choose your hat:</p>
+        <div class="hat-options">
+          <div class="hat-option" id="hat-tophat" onclick="selectHat('tophat')">
+            <canvas id="hatPreview-tophat" width="70" height="70"></canvas>
+            <span>Willy</span>
+          </div>
+          <div class="hat-option" id="hat-cowboy" onclick="selectHat('cowboy')">
+            <canvas id="hatPreview-cowboy" width="70" height="70"></canvas>
+            <span>Chuck</span>
+          </div>
+          <div class="hat-option" id="hat-beanie" onclick="selectHat('beanie')">
+            <canvas id="hatPreview-beanie" width="70" height="70"></canvas>
+            <span>Cartman</span>
+          </div>
+          <div class="hat-option" id="hat-rasta" onclick="selectHat('rasta')">
+            <canvas id="hatPreview-rasta" width="70" height="70"></canvas>
+            <span>Bob</span>
+          </div>
+          <div class="hat-option" id="hat-sombrero" onclick="selectHat('sombrero')">
+            <canvas id="hatPreview-sombrero" width="70" height="70"></canvas>
+            <span>Nacho</span>
+          </div>
+        </div>
+      </div>
+
       <canvas id="gameCanvas"></canvas>
       <p class="game-sub">Space / tap to jump &middot; dodge the bugs and corrupted files</p>
 
@@ -1064,6 +1109,7 @@
 
     // --- high score helpers ---
     let _gameOverScore = 0;
+    let _selectedHat = 'tophat'; // resets each visit — picker is always fresh
 
     function loadScores() {
       try { return JSON.parse(localStorage.getItem('rc_hiscores') || '[]'); }
@@ -1126,9 +1172,160 @@
       }
     });
 
+    // --- draw a hat on any canvas context ---
+    function drawHatOnCtx(ctx, type, x, headCY, headR) {
+      const topY = headCY - headR; // top of head circle
+      ctx.save();
+      if (type === 'tophat') {
+        const crownW = 10, crownH = 13, brimW = 18, brimH = 3;
+        const brimY = topY - 1;
+        // crown — black
+        ctx.fillStyle = '#111'; ctx.strokeStyle = '#444'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.rect(x - crownW / 2, brimY - crownH, crownW, crownH);
+        ctx.fill(); ctx.stroke();
+        // band
+        ctx.fillStyle = '#e94560';
+        ctx.beginPath(); ctx.rect(x - crownW / 2, brimY - 4, crownW, 2.5); ctx.fill();
+        // brim — black
+        ctx.fillStyle = '#111'; ctx.strokeStyle = '#444';
+        ctx.beginPath(); ctx.rect(x - brimW / 2, brimY, brimW, brimH); ctx.fill(); ctx.stroke();
+
+      } else if (type === 'cowboy') {
+        const brimY = topY + 1;
+        ctx.fillStyle = '#c8a060'; ctx.strokeStyle = '#8a6030'; ctx.lineWidth = 1;
+        // crown
+        ctx.beginPath();
+        ctx.moveTo(x - 7, brimY);
+        ctx.lineTo(x - 5, brimY - 10);
+        ctx.quadraticCurveTo(x, brimY - 13, x + 5, brimY - 10);
+        ctx.lineTo(x + 7, brimY);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        // brim
+        ctx.beginPath();
+        ctx.moveTo(x - 16, brimY + 1);
+        ctx.quadraticCurveTo(x - 8, brimY - 1, x, brimY);
+        ctx.quadraticCurveTo(x + 8, brimY - 1, x + 16, brimY + 1);
+        ctx.lineTo(x + 14, brimY + 3);
+        ctx.quadraticCurveTo(x, brimY + 4, x - 14, brimY + 3);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+
+      } else if (type === 'beanie') {
+        const capTopY = topY - 5;
+        ctx.fillStyle = '#2aada0'; ctx.strokeStyle = '#1d8a80'; ctx.lineWidth = 1;
+        // cap dome — teal (Cartman)
+        ctx.beginPath();
+        ctx.arc(x, capTopY + 2, 10, Math.PI, 0);
+        ctx.lineTo(x + 10, topY + 2); ctx.lineTo(x - 10, topY + 2);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        // roll band — yellow
+        ctx.fillStyle = '#ffcc00';
+        ctx.beginPath(); ctx.rect(x - 10, topY - 1, 20, 4); ctx.fill();
+        // pom pom — yellow
+        ctx.fillStyle = '#ffcc00';
+        ctx.beginPath(); ctx.arc(x, capTopY - 7, 3, 0, Math.PI * 2); ctx.fill();
+
+      } else if (type === 'rasta') {
+        const brimY = topY + 1;
+        const domeW = 13, domeH = 20;
+        ctx.save();
+        // clip to dome shape for stripe fill
+        ctx.beginPath();
+        ctx.moveTo(x - domeW, brimY);
+        ctx.quadraticCurveTo(x - domeW - 1, brimY - domeH * 0.55, x, brimY - domeH);
+        ctx.quadraticCurveTo(x + domeW + 1, brimY - domeH * 0.55, x + domeW, brimY);
+        ctx.closePath();
+        ctx.clip();
+        // stripes: green bottom, yellow middle, red top
+        const sh = domeH / 3;
+        ctx.fillStyle = '#228833'; ctx.fillRect(x - domeW - 2, brimY - sh, domeW * 2 + 4, sh + 1);
+        ctx.fillStyle = '#ffcc00'; ctx.fillRect(x - domeW - 2, brimY - sh * 2, domeW * 2 + 4, sh + 1);
+        ctx.fillStyle = '#cc2200'; ctx.fillRect(x - domeW - 2, brimY - domeH - 1, domeW * 2 + 4, sh + 1);
+        ctx.restore();
+        // dome border
+        ctx.strokeStyle = '#444'; ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x - domeW, brimY);
+        ctx.quadraticCurveTo(x - domeW - 1, brimY - domeH * 0.55, x, brimY - domeH);
+        ctx.quadraticCurveTo(x + domeW + 1, brimY - domeH * 0.55, x + domeW, brimY);
+        ctx.closePath(); ctx.stroke();
+        // black band at base
+        ctx.fillStyle = '#111';
+        ctx.beginPath(); ctx.rect(x - domeW, brimY - 2, domeW * 2, 3); ctx.fill();
+        // dreadlocks — 3 thick wavy strands hanging from hat base
+        ctx.save();
+        ctx.strokeStyle = '#7a5010'; ctx.lineCap = 'round';
+        ctx.lineWidth = 3.5;
+        ctx.beginPath(); ctx.moveTo(x - domeW + 1, brimY + 1);
+        ctx.quadraticCurveTo(x - domeW - 4, brimY + 13, x - domeW - 1, brimY + 28); ctx.stroke();
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(x - 5, brimY + 1);
+        ctx.quadraticCurveTo(x - 9, brimY + 11, x - 6, brimY + 24); ctx.stroke();
+        ctx.lineWidth = 3.5;
+        ctx.beginPath(); ctx.moveTo(x + domeW - 1, brimY + 1);
+        ctx.quadraticCurveTo(x + domeW + 4, brimY + 13, x + domeW + 1, brimY + 28); ctx.stroke();
+        ctx.restore();
+
+      } else if (type === 'sombrero') {
+        const brimY = topY + 1;
+        ctx.fillStyle = '#c8a060'; ctx.strokeStyle = '#8a6030'; ctx.lineWidth = 1;
+        // low, slightly conical crown
+        ctx.beginPath();
+        ctx.moveTo(x - 6, brimY);
+        ctx.lineTo(x - 2, brimY - 8);
+        ctx.quadraticCurveTo(x, brimY - 9, x + 2, brimY - 8);
+        ctx.lineTo(x + 6, brimY);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        // very wide, gently curved brim
+        ctx.beginPath();
+        ctx.moveTo(x - 22, brimY + 3);
+        ctx.quadraticCurveTo(x - 10, brimY - 1, x, brimY);
+        ctx.quadraticCurveTo(x + 10, brimY - 1, x + 22, brimY + 3);
+        ctx.lineTo(x + 18, brimY + 5);
+        ctx.quadraticCurveTo(x, brimY + 6, x - 18, brimY + 5);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        // decorative stitching line along crown base
+        ctx.strokeStyle = '#e94560'; ctx.lineWidth = 0.8;
+        ctx.beginPath(); ctx.moveTo(x - 6, brimY - 0.5); ctx.lineTo(x + 6, brimY - 0.5); ctx.stroke();
+        // colourful pompom trim along outer brim edge
+        const trimCols = ['#e94560', '#ffcc00', '#00cc88', '#7eb8e0', '#ff8800', '#e94560', '#ffcc00'];
+        trimCols.forEach(function(col, i) {
+          const t = i / (trimCols.length - 1); // 0..1
+          const tx = x - 18 + t * 36;
+          const ty = brimY + 4.5 + (Math.abs(t - 0.5) * 3);
+          ctx.fillStyle = col;
+          ctx.beginPath(); ctx.arc(tx, ty, 2, 0, Math.PI * 2); ctx.fill();
+        });
+      }
+      ctx.restore();
+    }
+
+    function initHatPicker() {
+      const types = ['tophat', 'cowboy', 'beanie', 'rasta', 'sombrero'];
+      types.forEach(function(type) {
+        const c = document.getElementById('hatPreview-' + type);
+        if (!c) return;
+        const pc = c.getContext('2d');
+        const cx = 35, cy = 48, r = 9;
+        // head preview
+        pc.strokeStyle = '#ffffff'; pc.lineWidth = 1.5;
+        pc.beginPath(); pc.arc(cx, cy, r, 0, Math.PI * 2); pc.stroke();
+        // hat preview
+        drawHatOnCtx(pc, type, cx, cy, r);
+        // no pre-selection — user picks fresh each visit
+      });
+    }
+
+    function selectHat(type) {
+      _selectedHat = type;
+      ['tophat', 'cowboy', 'beanie', 'rasta', 'sombrero'].forEach(function(t) {
+        document.getElementById('hat-' + t).classList.toggle('selected', t === type);
+      });
+    }
+
     function revealGame() {
       document.getElementById('gameTeaser').style.display = 'none';
       document.getElementById('gameWrap').style.display = 'block';
+      initHatPicker();
       renderScores();
       initGame();
     }
@@ -1187,6 +1384,19 @@
         // head
         const headR = 7, headY = y - 50 + headR;
         ctx.beginPath(); ctx.arc(x, headY, headR, 0, Math.PI * 2); ctx.stroke();
+
+        // hat
+        drawHatOnCtx(ctx, _selectedHat, x, headY, headR);
+
+        // moustache for Nacho (sombrero)
+        if (_selectedHat === 'sombrero') {
+          ctx.save();
+          ctx.strokeStyle = '#1a0800'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+          const mY = headY + 3;
+          ctx.beginPath(); ctx.moveTo(x - 1, mY); ctx.quadraticCurveTo(x - 5, mY - 2, x - 8, mY + 3); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(x + 1, mY); ctx.quadraticCurveTo(x + 5, mY - 2, x + 8, mY + 3); ctx.stroke();
+          ctx.restore();
+        }
 
         // body
         const neckY = headY + headR, hipY = y - 18;
