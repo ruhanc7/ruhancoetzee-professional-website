@@ -468,6 +468,15 @@
       background: var(--border);
     }
 
+    /* ===== SKILLS RADAR ===== */
+    #skills { border-top: 1px solid var(--border); }
+
+    .wordcloud-wrap {
+      width: 100%;
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
     /* ===== RESPONSIVE ===== */
     @media (max-width: 640px) {
       .nav-links { gap: 1rem; }
@@ -476,6 +485,7 @@
       .section-title { font-size: 1.7rem; }
     }
   </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/wordcloud2.js/1.2.2/wordcloud2.min.js"></script>
 </head>
 <body>
 
@@ -486,6 +496,7 @@
       <li><a href="#about">About</a></li>
       <li><a href="#timeline">Career</a></li>
       <li><a href="#accomplishments">Wins</a></li>
+      <li><a href="#skills">Skills</a></li>
       <li><a href="#development">Growth</a></li>
       <li><a href="#contact">Contact</a></li>
     </ul>
@@ -694,6 +705,17 @@
     </div>
   </section>
 
+  <!-- ===== SKILLS RADAR ===== -->
+  <section id="skills">
+    <p class="section-label">Competencies</p>
+    <h2 class="section-title">Skills Overview</h2>
+    <div class="divider"></div>
+
+    <div class="wordcloud-wrap">
+      <canvas id="wordCloud"></canvas>
+    </div>
+  </section>
+
   <!-- ===== PROFESSIONAL DEVELOPMENT ===== -->
   <section id="development">
     <p class="section-label">Growth</p>
@@ -849,6 +871,76 @@
 
     window.addEventListener('scroll', updateActiveLink, { passive: true });
     updateActiveLink();
+
+    // ===== SKILLS WORD CLOUD =====
+    (function () {
+      const canvas = document.getElementById('wordCloud');
+      const wrap = canvas.parentElement;
+      canvas.width  = Math.min(860, wrap.offsetWidth || 860);
+      canvas.height = Math.round(canvas.width * 0.58);
+
+      // [word, weight] — core skills largest, related terms smaller
+      const words = [
+        ['Data',             100],
+        ['Engineering',       82],
+        ['Analysis',          78],
+        ['Management',        72],
+        ['Leadership',        68],
+        ['Risk',              65],
+        ['Process',           62],
+        ['Strategy',          58],
+        ['Palantir Foundry',   55],
+        ['Analytics',         48],
+        ['Intelligence',      44],
+        ['Product',           42],
+        ['Insights',          40],
+        ['Pipeline',          38],
+        ['Governance',        36],
+        ['Automation',        36],
+        ['Stewardship',       34],
+        ['SQL',               32],
+        ['ETL',               30],
+        ['Modelling',         30],
+        ['AIP',               28],
+        ['Compliance',        26],
+        ['Stakeholders',      26],
+        ['Workflow',          24],
+        ['Forecasting',       22],
+        ['KNIME',             22],
+        ['Deployment',        20],
+        ['Supply Chain',      20],
+        ['Due Diligence',     20],
+        ['Backlog',           18],
+        ['Capacity',          18],
+        ['Investigations',    18],
+        ['Reporting',         16],
+        ['Transformation',    16],
+        ['Python',            16],
+        ['Power Apps',        14],
+        ['Decision-Making',   14],
+        ['Clients',           14],
+      ];
+
+      const palette = ['#e94560', '#ffffff', '#c8c8d8', '#7eb8e0', '#f0a0b0', '#9a9aaa', '#e0c080', '#a0d4b0'];
+
+      WordCloud(canvas, {
+        list: words,
+        gridSize: Math.round(13 * canvas.width / 860),
+        weightFactor: function (size) {
+          return (size / 100) * canvas.width * 0.105;
+        },
+        fontFamily: "'Segoe UI', system-ui, sans-serif",
+        fontWeight: 'bold',
+        color: function () {
+          return palette[Math.floor(Math.random() * palette.length)];
+        },
+        rotateRatio: 0.25,
+        rotationSteps: 2,
+        backgroundColor: 'transparent',
+        drawOutOfBound: false,
+        shuffle: true,
+      });
+    })();
 
     // Contact form — submits to Formspree
     async function handleSubmit(e) {
